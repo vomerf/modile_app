@@ -1,0 +1,24 @@
+version: "3.3"
+
+services:
+  postgres:
+    image: postgres:14.9
+    container_name: mobile_app_postgres
+    restart: always
+    command: -p 6100
+    ports:
+      - "6100:6100"
+    volumes:
+      - local_postgres_data:/var/lib/postgresql/data/
+    env_file:
+      - .env
+
+  mobile_app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+     - "8000:8000"
+
+volumes:
+  local_postgres_data:

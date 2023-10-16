@@ -1,1 +1,6 @@
 .mypy*
+.vscode
+test.py
+app/schemas_test.py
+app/form.py
+app/main_test.py
