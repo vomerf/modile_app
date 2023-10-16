@@ -7,6 +7,11 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str
     DB_HOST: str
     DB_PORT: int
+    DB_HOST_TEST: str
+    DB_PORT_TEST: int
+    DB_NAME_TEST: str
+    DB_USER_TEST: str
+    DB_PASS_TEST: str
 
     @property
     def database_url_asyncpg(self):

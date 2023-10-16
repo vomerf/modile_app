@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -7,6 +7,8 @@ from app.core.config import settings
 
 class Base(DeclarativeBase):
     pass
+
+metadata = MetaData()
 
 
 sync_engine = create_engine(

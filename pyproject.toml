@@ -20,6 +20,16 @@ pillow = "^10.0.1"
 isort = "^5.12.0"
 aioredis = "^2.0.1"
 starlette-admin = "^0.11.2"
+pytest = "^7.4.2"
+pytest-asyncio = "^0.21.1"
+httpx = "^0.25.0"
+
+
+[tool.pytest.ini_options]
+pythonpath = [
+  ".", "app",
+]
+asyncio_mode="auto"
 
 
 [build-system]
