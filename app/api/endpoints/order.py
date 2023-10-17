@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, select
@@ -14,12 +14,12 @@ from app.api.validators import (
     )
 from app.core.database import get_async_session
 from app.crud.order import create_order, delete_order, update_order
-from app.models.models import Order, Status
+from app.models.models import Customer, Order, Status
 from app.schemas.order import (
     OrderCreate, OrderDB, OrderUpdate, OrderUpdateStatus
 )
 
-# Создаём объект роутера.
+
 router = APIRouter(
     prefix='/order',
     tags=['Order']
@@ -32,12 +32,12 @@ router = APIRouter(
 async def create_new_order(
     order_in: OrderCreate,
     session: AsyncSession = Depends(get_async_session)
-):
+) -> Order:
     '''Для создания заказа обязательно
     нужно передать customer_id и phone_number
     по которым происходит проверка пользователя
     '''
-    customer = await check_that_customer_exist(
+    customer: Customer = await check_that_customer_exist(
         customer_id=order_in.customer_id, session=session
     )
     await check_customer_with_number(customer, order_in.phone_number)
@@ -48,8 +48,7 @@ async def create_new_order(
             order_in.outlet_id,
             session
         )
-    new_order = await create_order(order_in, session)
-
+    new_order: Order = await create_order(order_in, session)
     return new_order
 
 
@@ -73,7 +72,7 @@ async def get_all_orders(
     ended_end: Optional[datetime] = Query(
         None, description="Шаблон времени YYYY-MM-DDTHH:MM:SS"
     ),
-):
+) -> Sequence[Order]:
     '''Для получения списка заказов не обязательно
     нужно передать customer_id и phone_number
     по которым происходит проверка пользователя.
@@ -108,12 +107,12 @@ async def get_all_orders(
 async def get_order(
     order_id: int,
     session: AsyncSession = Depends(get_async_session)
-):
+) -> Order:
     '''Для получения списка заказов
     не обязательно нужно передать customer_id и phone_number
     по которым происходит проверка пользователя
     '''
-    order = await check_order_exists(order_id, session)
+    order: Order = await check_order_exists(order_id, session)
     return order
 
 
@@ -125,13 +124,13 @@ async def partially_update_order(
     order_id: int,
     order_in: OrderUpdate,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> Order:
     '''Для редактирования заказа обязательно
     нужно передать customer_id и phone_number
     по которым происходит проверка пользователя'''
 
-    order = await get_order_by_id(order_id, session)
-    customer = await check_that_customer_exist(
+    order: Order = await get_order_by_id(order_id, session)
+    customer: Customer = await check_that_customer_exist(
         customer_id=order_in.customer_id, session=session
     )
     await check_customer_with_number(customer, order_in.phone_number)
@@ -151,7 +150,7 @@ async def partially_update_order(
         await check_worker_in_outlet(
             order_in.worker_id, order.outlet_id, session
         )
-    new_order = await update_order(order, order_in, session)
+    new_order: Order = await update_order(order, order_in, session)
     return new_order
 
 
@@ -164,20 +163,20 @@ async def update_order_status(
     order_id: int,
     order_status: OrderUpdateStatus,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> Order:
     '''Для редактирования статуса в заказе обязательно
     нужно передать customer_id и phone_number
     по которым происходит проверка пользователя'''
 
     order: Order = await get_order_by_id(order_id, session)
-    customer = await check_that_customer_exist(
+    customer: Customer = await check_that_customer_exist(
         customer_id=order_status.customer_id, session=session
     )
     await check_that_current_customer_with_current_order(
         order.id, customer, session
     )
     await check_customer_with_number(customer, order_status.phone_number)
-    new_order = await update_order(order, order_status, session)
+    new_order: Order = await update_order(order, order_status, session)
     return new_order
 
 
@@ -192,7 +191,7 @@ async def delete_order_by_id(
     customer_id: int,
     phone_number: str,
     session: AsyncSession = Depends(get_async_session)
-):
+) -> Order:
     '''Для удаления заказе обязательно
     нужно передать customer_id и phone_number
     по которым происходит проверка пользователя'''
@@ -200,7 +199,7 @@ async def delete_order_by_id(
     db_order: Order = await get_order_by_id(
         order_id, session
     )
-    customer = await check_that_customer_exist(
+    customer: Customer = await check_that_customer_exist(
         customer_id=customer_id, session=session
     )
     await check_customer_with_number(customer, phone_number)
@@ -208,7 +207,7 @@ async def delete_order_by_id(
        order_id, customer, session
     )
 
-    order = await delete_order(
+    order: Order = await delete_order(
         db_order, session
     )
     return order
@@ -217,7 +216,7 @@ async def delete_order_by_id(
 async def get_order_by_id(
         order_id: int,
         session: AsyncSession,
-) -> Optional[Order]:
+) -> Order:
     db_order = await session.get(Order, order_id)
     if db_order is None:
         raise HTTPException(

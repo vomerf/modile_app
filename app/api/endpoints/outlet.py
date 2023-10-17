@@ -1,3 +1,4 @@
+from typing import Sequence
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +7,7 @@ from app.core.database import get_async_session
 from app.models.models import Customer, Outlet, Worker
 from app.models.worker_outlet import worker_outlet
 from app.schemas.outlet import OutletDB
+
 
 router = APIRouter(
     prefix='/outlet',
@@ -19,7 +21,7 @@ router = APIRouter(
 async def get_outlets(
     phone_number: str,
     session: AsyncSession = Depends(get_async_session)
-):
+) -> Sequence[Outlet]:
     stmt = (
             select(Outlet).
             join(Outlet.customers).

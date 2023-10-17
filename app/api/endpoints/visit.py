@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Sequence
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, select
@@ -13,7 +13,7 @@ from app.api.validators import (
     check_worker_in_order)
 from app.core.database import get_async_session
 from app.crud.visit import create_visit, delete_visit, update_visit
-from app.models.models import Customer, Order, Visit
+from app.models.models import Customer, Visit
 from app.schemas.visit import VisitCreate, VisitDB, VisitUpdate
 
 
@@ -27,9 +27,13 @@ router = APIRouter(
 async def create_new_visit(
     visit_in: VisitCreate,
     session: AsyncSession = Depends(get_async_session)
-):
+) -> Visit:
+    '''Для создания посещения обязательно
+    нужно передать customer_id и phone_number
+    по которым происходит проверка пользователя
+    '''
     await check_that_order_not_have_visit(session, visit_in)
-    customer = await check_that_customer_exist(
+    customer: Customer = await check_that_customer_exist(
         customer_id=visit_in.customer_id, session=session
     )
     await check_customer_with_number(customer, visit_in.phone_number)
@@ -42,7 +46,7 @@ async def create_new_visit(
             visit_in.outlet_id,
             session
         )
-    new_visit = await create_visit(visit_in, session)
+    new_visit: Visit = await create_visit(visit_in, session)
 
     return new_visit
 
@@ -60,16 +64,20 @@ async def get_all_visits(
     created_end: Optional[datetime] = Query(
         None, description="Шаблон времени YYYY-MM-DDTHH:MM:SS"
     ),
-):
-    query = select(Order)
+) -> Sequence[Visit]:
+    '''Для получения конкретного посещения не обязательно
+    передать customer_id и phone_number
+    по которым происходит проверка пользователя
+    '''
+    query = select(Visit)
     if created_start and created_end:
         query = query.where(and_(
-            Order.created_date >= created_start,
-            Order.created_date <= created_end
+            Visit.created_date >= created_start,
+            Visit.created_date <= created_end
             )
         )
-    db_objs = await session.execute(query)
-    return db_objs.scalars().all()
+    db_visits = await session.execute(query)
+    return db_visits.scalars().all()
 
 
 @router.get(
@@ -80,8 +88,12 @@ async def get_all_visits(
 async def get_visit(
     visit_id: int,
     session: AsyncSession = Depends(get_async_session)
-):
-    visit = await check_visit_exists(visit_id, session)
+) -> Visit:
+    '''Для получения конкретного посещения не обязательно
+    передать customer_id и phone_number
+    по которым происходит проверка пользователя
+    '''
+    visit: Visit = await check_visit_exists(visit_id, session)
     return visit
 
 
@@ -93,7 +105,11 @@ async def partially_update_(
     visit_id: int,
     visit_in: VisitUpdate,
     session: AsyncSession = Depends(get_async_session),
-):
+) -> Visit:
+    '''Для создания посещения обязательно
+    нужно передать customer_id и phone_number
+    по которым происходит проверка пользователя
+    '''
     visit: Visit = await get_visit_by_id(visit_id, session)
     customer: Customer = await check_that_customer_exist(
         customer_id=visit_in.customer_id, session=session
@@ -117,22 +133,25 @@ async def partially_update_(
         await check_worker_in_order(
             visit_in.worker_id, visit.order_id, session
         )
-    new_order = await update_visit(visit, visit_in, session)
-    return new_order
+    new_visit = await update_visit(visit, visit_in, session)
+    return new_visit
 
 
 @router.delete(
     '/{visit_id}',
     response_model=VisitDB,
     response_model_exclude_none=True
-
 )
 async def delete_visit_by_id(
     visit_id: int,
     customer_id: int,
     phone_number: str,
     session: AsyncSession = Depends(get_async_session)
-):
+) -> Visit:
+    '''Для создания посещения обязательно
+    нужно передать customer_id и phone_number
+    по которым происходит проверка пользователя
+    '''
     db_visit: Visit = await get_visit_by_id(
         visit_id, session
     )
@@ -153,8 +172,8 @@ async def delete_visit_by_id(
 async def get_visit_by_id(
         visit_id: int,
         session: AsyncSession,
-) -> Optional[Visit]:
-    db_visit = await session.get(Visit, visit_id)
+) -> Visit:
+    db_visit: Visit | None = await session.get(Visit, visit_id)
     if db_visit is None:
         raise HTTPException(
             status_code=404,
